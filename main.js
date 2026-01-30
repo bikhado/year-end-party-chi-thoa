@@ -431,7 +431,7 @@ class Slideshow {
             if (this.isPlaying) {
                 this.nextSlide();
                 // Ensure music plays if it was paused or blocked
-                if (this.audioController) this.audioController.resumeAudio();
+                this.resumeAudio();
             } else {
                 clearTimeout(this.timeout);
             }
@@ -458,12 +458,12 @@ class Slideshow {
 
         // Auto-play attempt
         document.body.addEventListener('click', () => {
-            if (this.audioController) this.audioController.resumeAudio();
+            this.resumeAudio();
         }, { once: true });
 
         // Try auto-play immediately (might be blocked)
         setTimeout(() => {
-            if (this.audioController) this.audioController.playTrack('welcome');
+            this.resumeAudio();
         }, 1000);
     }
 
