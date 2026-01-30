@@ -117,7 +117,16 @@ class Slideshow {
         } else {
             btn.style.opacity = '0.5';
             if (this.currentTrack) {
-                gsap.to(this.currentTrack, { volume: 0, duration: 1, onComplete: () => this.currentTrack.pause() });
+                const trackToPause = this.currentTrack; // Capture reference
+                gsap.to(trackToPause, {
+                    volume: 0,
+                    duration: 1,
+                    onComplete: () => {
+                        trackToPause.pause();
+                        // Reset volume so it's ready for next play
+                        trackToPause.currentTime = 0;
+                    }
+                });
                 this.currentTrack = null;
             }
         }
