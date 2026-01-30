@@ -214,7 +214,7 @@ class Slideshow {
                     const div = document.createElement('div');
                     div.className = 'slide slide-section-title';
                     const h1 = document.createElement('h1');
-                    h1.textContent = 'THƯ MỜI';
+                    h1.textContent = 'INVITATION';
                     div.appendChild(h1);
                     return div;
                 },
@@ -244,7 +244,7 @@ class Slideshow {
                     const div = document.createElement('div');
                     div.className = 'slide slide-section-title';
                     const h1 = document.createElement('h1');
-                    h1.textContent = 'THỰC ĐƠN';
+                    h1.textContent = 'MENU';
                     div.appendChild(h1);
                     return div;
                 },
@@ -274,7 +274,7 @@ class Slideshow {
                     const div = document.createElement('div');
                     div.className = 'slide slide-section-title';
                     const h1 = document.createElement('h1');
-                    h1.textContent = 'KHOẢNH KHẮC';
+                    h1.textContent = 'MOMENTS';
                     div.appendChild(h1);
                     return div;
                 },
@@ -331,7 +331,7 @@ class Slideshow {
                 const div = document.createElement('div');
                 div.className = 'slide slide-section-title';
                 const h1 = document.createElement('h1');
-                h1.textContent = 'VINH DANH';
+                h1.textContent = 'CELEBRATE';
                 div.appendChild(h1);
                 return div;
             },
@@ -346,8 +346,9 @@ class Slideshow {
                 div.style.textAlign = 'center';
                 const h2 = document.createElement('h2');
                 h2.className = 'honoree-title';
-                h2.textContent = 'KỶ NIỆM 10 NĂM CỐNG HIẾN';
-                h2.style.fontSize = '4rem';
+                h2.textContent = 'Celebrating 10 years of loyal service';
+                // Responsive font size using clamp: Min 2rem, 5% viewport, Max 4rem
+                h2.style.fontSize = 'clamp(2rem, 5vw, 4rem)';
                 h2.style.margin = '0';
                 h2.style.border = 'none';
                 div.appendChild(h2);
@@ -373,7 +374,25 @@ class Slideshow {
 
                     const nameEl = document.createElement('div');
                     nameEl.className = 'honoree-name';
-                    nameEl.textContent = name;
+
+                    // User Request: Split VN | EN names to two lines
+                    const parts = name.split('|').map(s => s.trim());
+                    const vnName = parts[0];
+                    const enName = parts[1] || '';
+
+                    const vnDiv = document.createElement('div');
+                    vnDiv.textContent = vnName;
+                    nameEl.appendChild(vnDiv);
+
+                    if (enName) {
+                        const enDiv = document.createElement('div');
+                        enDiv.textContent = enName;
+                        enDiv.style.fontSize = '0.6em'; // Smaller relative to the main name
+                        enDiv.style.marginTop = '10px';
+                        enDiv.style.color = 'var(--gold-light)';
+                        enDiv.style.fontWeight = '300';
+                        nameEl.appendChild(enDiv);
+                    }
 
                     const desc = document.createElement('div');
                     desc.className = 'honoree-award';
