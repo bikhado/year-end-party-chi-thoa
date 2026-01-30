@@ -1,5 +1,3 @@
-import { gsap } from 'gsap';
-
 class Slideshow {
     constructor() {
         this.container = document.getElementById('slides-container');
@@ -10,7 +8,24 @@ class Slideshow {
         this.currentIndex = -1;
         this.isPlaying = true;
         this.interval = null;
-        this.slideDuration = 5000;
+
+        // --- AUDIO CONTROLLER ---
+        this.audio = {
+            intro: new Audio('audio/intro.mp3'),
+            activity: new Audio('audio/activity.mp3'),
+            party: new Audio('audio/party.mp3'),
+            honors: new Audio('audio/honors.mp3'),
+            ending: new Audio('audio/ending.mp3')
+        };
+
+        // Configure Audio
+        Object.values(this.audio).forEach(track => {
+            track.loop = true;
+            track.volume = 0; // Start silent for fade-in
+        });
+
+        this.currentTrack = null;
+        this.isMusicPlaying = true; // Auto-play by default
 
         this.init();
     }
@@ -21,16 +36,16 @@ class Slideshow {
             this.assets = await response.json();
 
             this.setupBackground();
-            this.buildPlaylist();
-            this.setupControls();
+            this.generateSlides(); // Build playlist
+            this.createControls();
 
-            // INTRO SEQUENCE
-            setTimeout(() => {
-                this.bgLayer.classList.add('dimmed');
-                setTimeout(() => {
-                    this.nextSlide();
-                }, 1000);
-            }, 3000);
+            // Auto-detect music start on first interaction if blocked
+            document.addEventListener('click', () => {
+                this.resumeAudio();
+            }, { once: true });
+
+            // Note: INTRO SEQUENCE handled by nextSlide(0) logic
+            this.nextSlide();
 
         } catch (e) {
             console.error("Failed to load assets", e);
@@ -45,46 +60,121 @@ class Slideshow {
         }
     }
 
-    buildPlaylist() {
-        // 1. Welcome Slide (Explicitly use Welcome.jpg if available)
-        if (this.assets.welcome) {
-            this.slides.push({
-                type: 'welcome',
-                render: () => {
-                    const div = document.createElement('div');
-                    div.className = 'slide slide-welcome';
-                    const img = document.createElement('img');
-                    img.src = `./${this.assets.welcome}`;
-                    div.appendChild(img);
-                    return div;
-                },
-                duration: 6000
-            });
+    // --- AUDIO METHODS ---
+    playTrack(trackName) {
+        if (!this.isMusicPlaying) return;
+
+        const newTrack = this.audio[trackName];
+        if (this.currentTrack === newTrack) return; // Already playing
+
+        // Fade out current
+        if (this.currentTrack) {
+            const oldTrack = this.currentTrack;
+            gsap.to(oldTrack, { volume: 0, duration: 2, onComplete: () => oldTrack.pause() });
         }
 
-        // 1b. Company Name / Logo (If distinct from Welcome, or fallback)
+        // Fade in new
+        if (newTrack) {
+            newTrack.play().catch(e => console.log("Audio play failed (interaction needed):", e));
+            gsap.to(newTrack, { volume: 0.8, duration: 2 });
+            this.currentTrack = newTrack;
+        }
+    }
+
+    toggleMusic() {
+        this.isMusicPlaying = !this.isMusicPlaying;
+        const btn = document.getElementById('music-toggle');
+
+        if (this.isMusicPlaying) {
+            btn.style.opacity = '1';
+            // Trigger logic to play correct track for current slide immediately
+            const currentType = this.slides[this.currentIndex]?.type;
+            this.handleMusicChange(currentType);
+        } else {
+            btn.style.opacity = '0.5';
+            if (this.currentTrack) {
+                gsap.to(this.currentTrack, { volume: 0, duration: 1, onComplete: () => this.currentTrack.pause() });
+                this.currentTrack = null;
+            }
+        }
+    }
+
+    handleMusicChange(type) {
+        if (!type) return;
+
+        if (type === 'welcome' || type === 'company' || type === 'backdrop') {
+            this.playTrack('intro');
+        } else if (type === 'activity') {
+            this.playTrack('activity');
+        } else if (type === 'invitation' || type === 'menu' || type === 'section-title') {
+            this.playTrack('party');
+        } else if (type === 'honoree' || type === 'honoree-intro') {
+            this.playTrack('honors');
+        } else if (type === 'thankyou') {
+            this.playTrack('ending');
+        }
+    }
+
+    resumeAudio() {
+        if (!this.isMusicPlaying) return;
+
+        // If we have a track but it's paused (likely due to browser policy), try playing it
+        if (this.currentTrack && this.currentTrack.paused) {
+            this.currentTrack.play().catch(e => console.log("Audio resume failed:", e));
+        } else if (!this.currentTrack) {
+            // No track yet, start based on current slide
+            const currentType = this.slides[this.currentIndex]?.type;
+            if (currentType) this.handleMusicChange(currentType);
+        }
+    }
+
+    generateSlides() {
+        // --- 1. INTRO / BACKDROP (Music: On Top of the World) ---
+        this.slides.push({
+            type: 'backdrop',
+            duration: 3000,
+            render: () => {
+                const div = document.createElement('div');
+                div.className = 'slide slide-backdrop';
+                return div;
+            }
+        });
+
+        this.slides.push({
+            type: 'welcome',
+            duration: 5000,
+            render: () => {
+                const div = document.createElement('div');
+                div.className = 'slide slide-welcome';
+                const img = document.createElement('img');
+                img.src = 'THIỆP MỜI , LOGO/Welcome.jpg';
+                div.appendChild(img);
+                return div;
+            }
+        });
+
         this.slides.push({
             type: 'company',
             render: () => {
                 const div = document.createElement('div');
                 div.className = 'slide slide-welcome';
-                if (this.assets.company) {
-                    const img = document.createElement('img');
-                    img.src = `./${this.assets.company}`;
-                    div.appendChild(img);
-                } else {
-                    const h1 = document.createElement('h1');
-                    h1.textContent = 'Welcome';
-                    div.appendChild(h1);
-                }
+                // User requested TÊN CTY.jpg as the company slide
+                const img = document.createElement('img');
+                img.src = 'THIỆP MỜI , LOGO/TÊN CTY.jpg';
+                img.style.maxWidth = '80%';
+                img.style.maxHeight = '80%';
+                img.style.objectFit = 'contain';
+                img.style.filter = 'drop-shadow(0 0 30px rgba(255, 215, 0, 0.8))';
+
+                div.appendChild(img);
                 return div;
             },
-            duration: 5000
+            duration: 4000
         });
 
-        // 2. Invitations
+        // --- 2. PARTY / INVITATIONS / MENU (Music: Sugar) ---
+        // Invitations
         if (this.assets.invitations && this.assets.invitations.length > 0) {
-            // Section Title
             this.slides.push({
                 type: 'section-title',
                 render: () => {
@@ -97,26 +187,24 @@ class Slideshow {
                 },
                 duration: 3000
             });
-
-            this.assets.invitations.forEach(inviteUrl => {
+            this.assets.invitations.forEach(src => {
                 this.slides.push({
                     type: 'invitation',
                     render: () => {
                         const div = document.createElement('div');
                         div.className = 'slide slide-invitation';
                         const img = document.createElement('img');
-                        img.src = `./${inviteUrl}`;
+                        img.src = src;
                         div.appendChild(img);
                         return div;
                     },
-                    duration: 5000
+                    duration: 4000
                 });
             });
         }
 
-        // 3. Menus
+        // Menu
         if (this.assets.menu && this.assets.menu.length > 0) {
-            // Section Title
             this.slides.push({
                 type: 'section-title',
                 render: () => {
@@ -129,26 +217,68 @@ class Slideshow {
                 },
                 duration: 3000
             });
-
-            this.assets.menu.forEach(menuUrl => {
+            this.assets.menu.forEach(src => {
                 this.slides.push({
                     type: 'menu',
                     render: () => {
                         const div = document.createElement('div');
                         div.className = 'slide slide-menu';
                         const img = document.createElement('img');
-                        img.className = 'fullscreen-img';
-                        img.style.objectFit = 'contain';
-                        img.src = `./${menuUrl}`;
+                        img.src = src;
                         div.appendChild(img);
                         return div;
                     },
-                    duration: 6000
+                    duration: 5000
                 });
             });
         }
 
-        // 4. Honorees (Top 10 - 10 Years Service)
+        // --- 3. ACTIVITIES / KHOẢNH KHẮC (Music: Sunday Best) ---
+        if (this.assets.activities && this.assets.activities.length > 0) {
+            this.slides.push({
+                type: 'section-title',
+                render: () => {
+                    const div = document.createElement('div');
+                    div.className = 'slide slide-section-title';
+                    const h1 = document.createElement('h1');
+                    h1.textContent = 'KHOẢNH KHẮC';
+                    div.appendChild(h1);
+                    return div;
+                },
+                duration: 3000
+            });
+
+            // Randomize and limit check
+            const shuffled = [...this.assets.activities].sort(() => 0.5 - Math.random());
+
+            // SINGLE IMAGE LAYOUT (Centering Fix)
+            shuffled.forEach(src => {
+                this.slides.push({
+                    type: 'activity',
+                    render: () => {
+                        const div = document.createElement('div');
+                        div.className = 'slide slide-activity-single';
+
+                        // Main Photo (Centered, no cropping)
+                        const img = document.createElement('img');
+                        img.className = 'activity-photo-single';
+                        img.src = src;
+
+                        // Blurred Background
+                        const bgDiv = document.createElement('div');
+                        bgDiv.className = 'activity-bg-blur';
+                        bgDiv.style.backgroundImage = `url(${src})`;
+                        div.appendChild(bgDiv);
+
+                        div.appendChild(img);
+                        return div;
+                    },
+                    duration: 4000
+                });
+            });
+        }
+
+        // --- 4. HONOREES / VINH DANH (Music: Hall of Fame) ---
         const top10Honorees = [
             "TRAN HONG CHIEN",
             "NGUYEN THI HONG LOAN | SYDNEY",
@@ -162,7 +292,6 @@ class Slideshow {
             "TRAN THI HAI HANH | HANA"
         ];
 
-        // Section Title
         this.slides.push({
             type: 'section-title',
             render: () => {
@@ -176,21 +305,18 @@ class Slideshow {
             duration: 3000
         });
 
-        // 10 Years Service Intro Slide
         this.slides.push({
             type: 'honoree-intro',
             render: () => {
                 const div = document.createElement('div');
                 div.className = 'slide slide-honorees';
                 div.style.textAlign = 'center';
-
                 const h2 = document.createElement('h2');
                 h2.className = 'honoree-title';
                 h2.textContent = 'KỶ NIỆM 10 NĂM CỐNG HIẾN';
                 h2.style.fontSize = '4rem';
                 h2.style.margin = '0';
                 h2.style.border = 'none';
-
                 div.appendChild(h2);
                 return div;
             },
@@ -217,7 +343,7 @@ class Slideshow {
                     nameEl.textContent = name;
 
                     const desc = document.createElement('div');
-                    desc.className = 'honoree-award'; // Using existing class for styling
+                    desc.className = 'honoree-award';
                     desc.innerHTML = `
                         Celebrating over 10 years of loyal service.<br>
                         Thank you from all your friends and colleagues
@@ -235,45 +361,7 @@ class Slideshow {
             });
         });
 
-        // 5. Activities
-        if (this.assets.activities && this.assets.activities.length > 0) {
-            // Section Title
-            this.slides.push({
-                type: 'section-title',
-                render: () => {
-                    const div = document.createElement('div');
-                    div.className = 'slide slide-section-title';
-                    const h1 = document.createElement('h1');
-                    h1.textContent = 'KHOẢNH KHẮC';
-                    div.appendChild(h1);
-                    return div;
-                },
-                duration: 3000
-            });
-
-            const actCount = 30; // Increased count
-            const shuffled = [...this.assets.activities].sort(() => 0.5 - Math.random());
-
-            shuffled.slice(0, actCount).forEach(url => {
-                this.slides.push({
-                    type: 'activity',
-                    render: () => {
-                        const div = document.createElement('div');
-                        div.className = 'slide slide-activity-single';
-                        const img = document.createElement('img');
-                        img.src = `./${url}`;
-                        img.className = 'fullscreen-img';
-                        div.appendChild(img);
-                        return div;
-                    },
-                    duration: 4000
-                });
-            });
-        }
-
-
-
-        // 6. Thank You Slide
+        // --- 5. RECAP / THANK YOU (Music: Memories) ---
         this.slides.push({
             type: 'thankyou',
             render: () => {
@@ -281,94 +369,144 @@ class Slideshow {
                 div.className = 'slide slide-thankyou';
                 const h1 = document.createElement('h1');
                 h1.textContent = 'THANK YOU';
-
                 const sub = document.createElement('div');
                 sub.style.color = "var(--gold)";
                 sub.style.marginTop = "20px";
                 sub.style.fontSize = "2rem";
                 sub.textContent = "See you next year!";
-
                 div.appendChild(h1);
                 div.appendChild(sub);
                 return div;
             },
-            duration: 8000
+            duration: 10000
         });
 
         console.log(`Playlist built: ${this.slides.length} slides.`);
     }
 
-    setupControls() {
-        document.getElementById('btn-next').onclick = () => { this.resetTimer(); this.nextSlide(); };
-        document.getElementById('btn-prev').onclick = () => { this.resetTimer(); this.prevSlide(); };
-        document.getElementById('btn-pause').onclick = () => {
-            this.isPlaying = !this.isPlaying;
-            document.getElementById('btn-pause').textContent = this.isPlaying ? "Pause" : "Play";
-            if (this.isPlaying) this.nextSlide();
-            else clearTimeout(this.timeout);
+    // SKIP SECTION Logic (Added)
+    nextSection() {
+        let nextIndex = -1;
+        // Search for the next 'section-title' or 'thankyou' from current position
+        for (let i = this.currentIndex + 1; i < this.slides.length; i++) {
+            if (this.slides[i].type === 'section-title' || this.slides[i].type === 'thankyou') {
+                nextIndex = i;
+                break;
+            }
+        }
+
+        if (nextIndex !== -1) {
+            this.goToSlide(nextIndex);
+        } else {
+            // If no next section, loop back to start (Intro)
+            this.goToSlide(0);
+        }
+    }
+
+    createControls() {
+        // Controls Container
+        const controls = document.createElement('div');
+        controls.id = 'controls';
+
+        // Helper to create icon buttons
+        const createBtn = (icon, onClick, title) => {
+            const btn = document.createElement('div');
+            btn.className = 'control-btn';
+            btn.innerHTML = icon;
+            btn.title = title;
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                onClick(btn);
+            };
+            return btn;
         };
+
+        // Prev
+        const prevBtn = createBtn('⏮', () => this.prevSlide(), 'Previous Slide');
+
+        // Pause/Play
+        const pauseBtn = createBtn('⏸', (btn) => {
+            this.isPlaying = !this.isPlaying;
+            btn.innerHTML = this.isPlaying ? '⏸' : '▶';
+            if (this.isPlaying) {
+                this.nextSlide();
+                // Ensure music plays if it was paused or blocked
+                if (this.audioController) this.audioController.resumeAudio();
+            } else {
+                clearTimeout(this.timeout);
+            }
+        }, 'Pause/Play');
+
+        // Next (Single)
+        const nextBtn = createBtn('⏭', () => this.nextSlide(), 'Next Slide');
+
+        // Skip Section (New)
+        const skipBtn = createBtn('⏩', () => this.nextSection(), 'Skip to Next Section');
+        skipBtn.style.border = '1px solid var(--gold-light)'; // Distinguish slightly
+
+        // Music Toggle (Moved to Controls)
+        const musicBtn = createBtn('🎵', () => this.toggleMusic(), 'Toggle Music');
+        musicBtn.id = 'music-toggle'; // Keep ID for logic references
+
+        controls.appendChild(prevBtn);
+        controls.appendChild(pauseBtn);
+        controls.appendChild(nextBtn);
+        controls.appendChild(skipBtn);
+        controls.appendChild(musicBtn); // <--- Added Music Button to Group
+
+        document.body.appendChild(controls);
+
+        // Auto-play attempt
+        document.body.addEventListener('click', () => {
+            if (this.audioController) this.audioController.resumeAudio();
+        }, { once: true });
+
+        // Try auto-play immediately (might be blocked)
+        setTimeout(() => {
+            if (this.audioController) this.audioController.playTrack('welcome');
+        }, 1000);
     }
 
-    resetTimer() {
-        clearTimeout(this.timeout);
+    nextSlide() {
+        let index = this.currentIndex + 1;
+        if (index >= this.slides.length) index = 0;
+        this.goToSlide(index);
     }
 
-    async nextSlide() {
-        let next = this.currentIndex + 1;
-        if (next >= this.slides.length) next = 0;
-        await this.goToSlide(next);
+    prevSlide() {
+        let index = this.currentIndex - 1;
+        if (index < 0) index = this.slides.length - 1;
+        this.goToSlide(index);
     }
 
-    async prevSlide() {
-        let prev = this.currentIndex - 1;
-        if (prev < 0) prev = this.slides.length - 1;
-        await this.goToSlide(prev);
-    }
-
-    async goToSlide(index) {
-        if (index === this.currentIndex) return;
+    goToSlide(index) {
+        // if (this.isTransitioning) return; // REMOVED LOCK for instant response
+        this.isTransitioning = true;
 
         const currentSlideEl = this.container.querySelector('.slide.active');
         const nextSlideData = this.slides[index];
 
-        // Create new DOM
-        const nextSlideEl = nextSlideData.render();
-        this.container.appendChild(nextSlideEl);
+        // 1. Handle Music
+        this.handleMusicChange(nextSlideData.type);
 
-        // Random Animation Strategy
-        const animType = Math.floor(Math.random() * 5); // 0 to 4
-
-        // Default Enter props
-        let fromProps = { opacity: 0, scale: 0.8 };
-        let toProps = { opacity: 1, scale: 1, duration: 1.5, ease: "power2.out" };
-
-        switch (animType) {
-            case 0: // Zoom In
-                fromProps = { opacity: 0, scale: 1.5 };
-                toProps.scale = 1;
-                break;
-            case 1: // Slide from Right
-                fromProps = { opacity: 0, x: 200, scale: 1 };
-                toProps.x = 0;
-                break;
-            case 2: // Slide from Bottom
-                fromProps = { opacity: 0, y: 100, scale: 1 };
-                toProps.y = 0;
-                break;
-            case 3: // Rotate/Flip
-                fromProps = { opacity: 0, rotationY: 90 };
-                toProps.rotationY = 0;
-                break;
-            default: // Basic Fade/Scale
-                break;
+        // 2. Handle Backdrop
+        // 2. Handle Backdrop: ONLY visible on Intro/Welcome slides
+        if (index === 0) {
+            this.bgLayer.classList.remove('dimmed');
+            this.bgLayer.style.opacity = '1';
+            this.bgFill.style.opacity = '0';
+        } else {
+            // Hide completely for other slides as requested
+            this.bgLayer.classList.add('dimmed');
+            this.bgLayer.style.opacity = '0';
+            this.bgFill.style.opacity = '0.4';
         }
 
-        // Frame Logic
-        const frameEl = document.getElementById('global-frame');
-        // Reset classes
-        frameEl.className = '';
 
-        // Add specific class based on slide type
+        // 3. Handle Frame Style
+        const frameEl = document.getElementById('global-frame');
+        frameEl.className = ''; // Reset
+
         if (nextSlideData.type === 'invitation' || nextSlideData.type === 'section-title') {
             frameEl.classList.add('frame-type-invitation');
         } else if (nextSlideData.type === 'menu') {
@@ -377,19 +515,40 @@ class Slideshow {
             frameEl.classList.add('frame-type-honoree');
         } else if (nextSlideData.type === 'activity') {
             frameEl.classList.add('frame-type-activity');
-        } else if (nextSlideData.type === 'welcome' || nextSlideData.type === 'company') {
+        } else if (nextSlideData.type === 'welcome' || nextSlideData.type === 'company' || nextSlideData.type === 'backdrop') {
             frameEl.classList.add('frame-type-welcome');
         }
 
+        // 4. Render & Animate
+        const nextSlideEl = nextSlideData.render();
+        this.container.appendChild(nextSlideEl);
+
+        let fromProps = { opacity: 0, scale: 0.8 };
+        let toProps = { opacity: 1, scale: 1, duration: 1.5, ease: "power2.out" };
+
+        // Random animation (Default)
+        const animType = Math.floor(Math.random() * 5);
+        if (animType === 0) { fromProps = { opacity: 0, scale: 1.5 }; toProps.scale = 1; }
+        else if (animType === 1) { fromProps = { opacity: 0, x: 200 }; toProps.x = 0; }
+        else if (animType === 2) { fromProps = { opacity: 0, y: 100 }; toProps.y = 0; }
+        else if (animType === 3) { fromProps = { opacity: 0, rotationY: 90 }; toProps.rotationY = 0; }
+
+        // OVERRIDE: Force smooth Fade for Activity Slides (Fix performance/smoothness)
+        if (nextSlideData.type === 'activity') {
+            fromProps = { opacity: 0, scale: 1.05 };
+            toProps = { opacity: 1, scale: 1, duration: 2.0, ease: "power2.out" };
+        }
+
+        // Kill any ongoing animations on the container to prevent conflicts
+        gsap.killTweensOf(this.container.children);
+
         gsap.fromTo(nextSlideEl, fromProps, toProps);
 
-        // Exit old
         if (currentSlideEl) {
+            // Immediate removal for snappy feel, or very fast fade
             gsap.to(currentSlideEl, {
                 opacity: 0,
-                scale: 0.9,
-                x: -50,
-                duration: 1.0,
+                duration: 0.3, // Much faster exit
                 onComplete: () => currentSlideEl.remove()
             });
             currentSlideEl.classList.remove('active');
@@ -398,8 +557,12 @@ class Slideshow {
         nextSlideEl.classList.add('active');
         this.currentIndex = index;
 
+        // Unlock transition immediately (or remove flag entirely if not needed)
+        this.isTransitioning = false;
+
         // Schedule next
         if (this.isPlaying) {
+            clearTimeout(this.timeout);
             this.timeout = setTimeout(() => {
                 this.nextSlide();
             }, nextSlideData.duration);

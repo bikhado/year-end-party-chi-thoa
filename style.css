@@ -237,23 +237,40 @@ body {
 }
 
 
-.slide-activity {
-    width: 100%;
-    height: 100%;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-    gap: 10px;
-    padding: 20px;
+/* Activity Slide - GRID (Removed) */
+
+/* Activity Slide - SINGLE */
+/* Activity Slide - SINGLE */
+/* Activity Slide - SINGLE (Centered) */
+/* Activity Slide - SINGLE (Centered) */
+.slide-activity-single {
+    /* Inherit width/height (90vw/90vh) from .slide to keep safe margins from frame */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    /* Reinforce absolute centering */
+    overflow: hidden;
 }
 
-.activity-photo {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 8px;
-    opacity: 0.8;
-    transition: opacity 0.5s ease;
+.activity-photo-single {
+    position: relative;
+    z-index: 10;
+    /* Ensure image creates its own safe zone inside the 90vw container */
+    max-width: 95%;
+    max-height: 95%;
+    object-fit: contain;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.activity-bg-blur {
+    position: absolute;
+    inset: -20px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(30px) brightness(0.4);
+    z-index: 1;
 }
 
 .activity-photo.highlight {
@@ -262,6 +279,8 @@ body {
     z-index: 10;
     box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
 }
+
+/* Activity Slide - SINGLE (Removed) */
 
 .fullscreen-img {
     width: 100%;
@@ -488,36 +507,48 @@ body {
 }
 
 /* Controls */
+/* Controls */
 #controls {
     position: absolute;
-    bottom: 20px;
+    bottom: 30px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 100;
     display: flex;
-    gap: 10px;
-    opacity: 0;
+    gap: 20px;
+    padding: 10px 20px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 30px;
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(5px);
     transition: opacity 0.3s;
 }
 
-#controls:hover {
-    opacity: 1;
-}
-
-button {
-    background: var(--glass);
+.control-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.4);
     border: 1px solid var(--gold);
     color: var(--gold);
-    padding: 5px 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
     cursor: pointer;
-    text-transform: uppercase;
-    font-family: var(--font-body);
+    transition: all 0.3s ease;
+    user-select: none;
 }
 
-#music-toggle {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    z-index: 100;
-    opacity: 0.5;
+.control-btn:hover {
+    background: var(--gold);
+    color: #000;
+    transform: scale(1.1);
+    box-shadow: 0 0 15px var(--gold);
 }
+
+.control-btn:active {
+    transform: scale(0.95);
+}
+
+/* Floating Music Button Removed - Now in group */
