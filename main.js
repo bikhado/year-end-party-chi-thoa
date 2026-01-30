@@ -65,7 +65,14 @@ class Slideshow {
         if (!this.isMusicPlaying) return;
 
         const newTrack = this.audio[trackName];
-        if (this.currentTrack === newTrack) return; // Already playing
+
+        // Fix: If blocking happened, currentTrack might be equal but paused.
+        if (this.currentTrack === newTrack) {
+            if (this.currentTrack.paused) {
+                this.currentTrack.play().catch(e => console.log("Audio resume failed:", e));
+            }
+            return;
+        }
 
         // Fade out current
         if (this.currentTrack) {
@@ -75,13 +82,30 @@ class Slideshow {
 
         // Fade in new
         if (newTrack) {
-            newTrack.play().catch(e => console.log("Audio play failed (interaction needed):", e));
-            gsap.to(newTrack, { volume: 0.8, duration: 2 });
+            newTrack.volume = 0; // Ensure start at 0
+            newTrack.play().then(() => {
+                // Success
+                gsap.to(newTrack, { volume: 0.8, duration: 2 });
+            }).catch(e => {
+                console.log("Audio play blocked. Waiting for interaction.", e);
+            });
             this.currentTrack = newTrack;
         }
     }
 
     toggleMusic() {
+        // Fix for "Double Click" issue:
+        // If state says "Playing" (default) but audio is actually blocked/paused,
+        // treat this click as a "Force Start" instead of "Turn Off".
+        if (this.isMusicPlaying && this.currentTrack && this.currentTrack.paused) {
+            console.log("Auto-play blocked, user interceded. Resuming.");
+            this.resumeAudio();
+            // Update button opacity to ensure it looks active
+            const btn = document.getElementById('music-toggle');
+            if (btn) btn.style.opacity = '1';
+            return;
+        }
+
         this.isMusicPlaying = !this.isMusicPlaying;
         const btn = document.getElementById('music-toggle');
 
