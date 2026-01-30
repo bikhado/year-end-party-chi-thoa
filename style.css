@@ -199,12 +199,15 @@ body {
 
 .honoree-card {
     text-align: center;
-    max-width: 800px;
+    max-width: 90vw;
+    /* Increased from 800px to avoid wrapping */
+    width: 100%;
 }
 
 .honoree-title {
     font-family: var(--font-heading);
-    font-size: 3rem;
+    font-size: clamp(1.5rem, 3vw, 3rem);
+    /* Responsive */
     color: var(--gold);
     margin-bottom: 3rem;
     border-bottom: 2px solid var(--gold);
@@ -213,8 +216,11 @@ body {
 }
 
 .honoree-name {
-    font-size: 5rem;
+    /* Responsive font: massive on big screens, smaller on laptops */
+    font-size: clamp(2.5rem, 6vw, 6rem);
     font-weight: 700;
+    white-space: nowrap;
+    /* FORCE SINGLE LINE */
     background: linear-gradient(45deg, var(--gold), #ffffff, var(--gold));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
